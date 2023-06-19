@@ -1,201 +1,104 @@
-#include <Keypad.h>
 #include <Wire.h>
+//#include <Stepper.h>
+//#include <Servo.h>
 
-#define I2C_DISP_ADDR 10
-#define I2C_MOTOR_ADDR 11
+//# define I2C_ADDRESS 11
 
-#define NUM_ROW 4
-#define NUM_COL 4
+const int GATEOPEN = 0;
+const int GATECLOSE = 1;
 
-// Define the keymap
-char keys[NUM_ROW][NUM_COL] = {
-    {'1', '2', '3', 'A'},
-    {'4', '5', '6', 'B'},
-    {'7', '8', '9', 'C'}, 
-    {'*', '0', '#', 'D'}
-};
+//Servo myservo; 
 
-// Define the row and column pins of the keypad
-byte pin_rows[NUM_ROW] = {2,3,4,5}; // Connect to the row pinouts of the keypad
-byte pin_column[NUM_COL] = {6,7,8,9}; // Connect to the column pinouts of the keypad
+const int stepsPerRevolution = 2038;
 
-// Create an instance of the Keypad class
-Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, NUM_ROW, NUM_COL);
+// Creates an instance of stepper class
+// Pins entered in sequence IN1-IN3-IN2-IN4 for proper step sequence
+//Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);
+const int buttonD = 2;
+const int buttonG = 3;
 
-bool debugOn;
-// seed is what is displayed
-String seed;
+// gateState uses the defined const above
+int gateState;
 
-// seedSetTime is when the seed was last set
-unsigned long seedSetTime;
 
-// goodPin is the answer to a good pin
-String goodPin;
-
-// enteredPin is what user has put in so far
-String enteredPin;
-
-int bd = 0;
-// gateOpened is the millis when gate was Opened
-// set to zero when gate is closed
-unsigned long gateOpened;
-
-unsigned long gateOpenTimeout = 30000;
-
-void setup() {  
-    Wire.begin(); 							
-    Serial.begin(9600); 	
-    Serial.println("--------- Controller");
-    keypad.setDebounceTime(50);
-    // just wondering what this will do, will it catch a type error
-    gateOpened = -1;
-    // gateOpened = 0;
-    updateSeed();
-    debugOn = false;
+void setup() {
+  //myStepper.setSpeed(15);
+  Serial.begin(9600);
+  pinMode(buttonG, INPUT);
+  pinMode(buttonD, INPUT);
+  //myservo.attach(12); 
+  closeGate();
+  Wire.begin(11);
+  Serial.println("-----------------I am Slave1");           
+  Wire.onReceive(receiveEvents);
 }
 
 void loop() {
+  /*
+  //Serial.println("loop");
+  if (digitalRead(buttonD) == HIGH) {
+    Serial.println("deploying");
+    rotate();
+    Serial.println("delay");
+    delay(500);
+  }
 
-    char key = keypad.getKey();
-    if (key) {
-        Serial.println("key entered: " + key);
-        switch (key) {
-            case '*':
-                updateSeed();
-                break;
-            case '#':
-                testInput();
-                break;
-            case 'D':
-                dispenseBall();
-            default:
-                processKey(key);
-                break;
-        }
-    }
-
-    // check if we should close gate
-    // if current milliseconds minus when the gate was opened 
-    if (gateOpened != 0) {
-        if (millis() - gateOpened > 30000) {
-            closeGate();
-        }
-    }
-}
-
-void processKey(char key)  {
-    if (bd == 0 || bd == 3) {
-        if (key == 'B') {
-            bd++;
-        }
-    }
-
-    if (bd == 1 || bd == 2) {
-        if (key == '0') {
-            bd++;
-        }
-    }
-
-    if ( bd == 4 && key == '5') {
-        debugOn == true;
-        bd++;
-    }
-    enteredPin += key;
-    Wire.beginTransmission(I2C_DISP_ADDR);
-    Wire.print("1Pin: "+enteredPin+"         ");											
-    Wire.endTransmission(); 		
-}
-
-void testInput() {
-    if (enteredPin == goodPin) {
-        openGate();
+  if (digitalRead(buttonG) == HIGH) {
+    Serial.println("gate");
+    if (gateState == GATEOPEN) {
+      closeGate();
     } else {
-        Wire.beginTransmission(I2C_DISP_ADDR);
-        Wire.print("1 Error          ");											
-        Wire.endTransmission(); 		
-        delay(25);
-        Wire.beginTransmission(I2C_DISP_ADDR);
-        Wire.print("2 Bad Pin        ");											
-        Wire.endTransmission(); 		
+      openGate();
     }
-    dispenseBall();
+    delay(500);
+  }
+  */
+  delay(25);
+}
+void receiveEvents(int numBytes)
+{  
+  Serial.println("---> recieved events");
+  char n;
+  n = Wire.read();
+  if (n == 'D') {
+    rotate();
+    return;
+  }
+  if (n == 'O') {
+    openGate();
+    return;
+  }
+ if (n == 'C') {
+    closeGate();
+    return;
+  }
+  Serial.println("Recieved unknown byte:");
+  Serial.println(n);
 }
 
-void updateSeed() {
-    reset();
-    // find random number
-    randomSeed(analogRead(A0)); 
-    int randomNumber = random(90000) + 10000; 
-    seed = String(randomNumber);
-    // compute answer
-    computeAnswer(randomNumber);
-    Wire.beginTransmission(I2C_DISP_ADDR);
-    if (!debugOn) {
-        Wire.print("2"+seed+"             ");											
-    } else {
-        Wire.print("2"+seed+"  --"+goodPin+"--    ");											
-    } 
-
-    Wire.endTransmission(); 		
-    Wire.beginTransmission(I2C_DISP_ADDR);
-    Wire.print("1Enter pin:              ");											
-    Wire.endTransmission(); 		
-
-}
-
-void reset() {
-    enteredPin = "";
-    Wire.beginTransmission(I2C_DISP_ADDR);
-    Wire.print("1 RESETTING...    ");											
-    Wire.endTransmission(); 		
-    Wire.beginTransmission(I2C_DISP_ADDR);
-    Wire.print("2                 ");											
-    Wire.endTransmission(); 		
-    delay(1500);
-
-}
-
-void dispenseBall() {
-    Serial.println("Send ball");
-    Wire.beginTransmission(I2C_MOTOR_ADDR);
-    Wire.write('D');											
-    Wire.endTransmission(); 		
-}
-
-void closeGate() {
-    gateOpened = 0;
-    Wire.beginTransmission(I2C_MOTOR_ADDR);
-    Wire.write('C');											
-    Wire.endTransmission(); 		
+void rotate() {
+  Serial.println("deploying");
+   //myStepper.step(-stepsPerRevolution);
 }
 
 void openGate() {
-    gateOpened = millis();
-    Wire.beginTransmission(I2C_MOTOR_ADDR);
-    Wire.write('O');											
-    Wire.endTransmission(); 		
+  Serial.println("opening gate");
+  int pos;
+  for (pos = 30; pos >= 0; pos -= 2) { 
+   // myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15ms for the servo to reach the position
+  }
+  //myservo.write(0);
+  gateState = GATEOPEN;  
 }
 
-void computeAnswer(int seed) {
-    // Divide the number by 11
-    int r = floor(seed / 3);
-    r *= 13;
-
-    String rs = String(r);
-    Serial.println("after multipications: " + rs);
-    // Swap each pair of numbers
-    int length = rs.length();
-    for (int i = 0; i < rs.length() - 1; i += 2) {
-        char temp = rs[i];
-        rs[i] = rs[i + 1];
-        rs[i + 1] = temp;
-    }
-
-    Serial.println("after swaps: " + rs);
-    // Extract the 4 least significant digits
-  
-    rs = rs.substring(0, 4);
-    Serial.println("4 least sig digits: " + rs);
-    goodPin = rs;
+void closeGate() {
+  Serial.println("close gate");
+  int pos;
+  for (pos = 0; pos <= 30; pos += 2) { 
+   // myservo.write(pos);              
+    delay(15);
+  }
+  //myservo.write(30);
+  gateState = GATECLOSE;
 }
-

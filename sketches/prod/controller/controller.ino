@@ -8,7 +8,7 @@
 #define NUM_COL 4
 
 // Define the keymap
-char keys[ROW_NUM][COLUMN_NUM] = {
+char keys[NUM_ROW][NUM_COL] = {
     {'1', '2', '3', 'A'},
     {'4', '5', '6', 'B'},
     {'7', '8', '9', 'C'}, 
@@ -20,9 +20,9 @@ byte pin_rows[NUM_ROW] = {2,3,4,5}; // Connect to the row pinouts of the keypad
 byte pin_column[NUM_COL] = {6,7,8,9}; // Connect to the column pinouts of the keypad
 
 // Create an instance of the Keypad class
-Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM);
+Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, NUM_ROW, NUM_COL);
 
-bool debugOn 
+bool debugOn;
 // seed is what is displayed
 String seed;
 
@@ -60,16 +60,16 @@ void loop() {
     if (key) {
         Serial.println("key entered: " + key);
         switch (key) {
-            case "*":
+            case '*':
                 updateSeed();
                 break;
-            case "#":
+            case '#':
                 testInput();
                 break;
-            case "D":
+            case 'D':
                 dispenseBall();
             default:
-                processKey();
+                processKey(key);
                 break;
         }
     }
@@ -128,7 +128,7 @@ void updateSeed() {
     int randomNumber = random(90000) + 10000; 
     seed = String(randomNumber);
     // compute answer
-    goodPin = computeAnswer(randomNumber);
+    computeAnswer(randomNumber);
     Wire.beginTransmission(I2C_DISP_ADDR);
     if (!debugOn) {
         Wire.print("2"+seed+"             ");											
@@ -151,7 +151,7 @@ void reset() {
     Wire.beginTransmission(I2C_DISP_ADDR);
     Wire.print("2                 ");											
     Wire.endTransmission(); 		
-    delay(1500)
+    delay(1500);
 
 }
 
@@ -193,9 +193,9 @@ void computeAnswer(int seed) {
 
     Serial.println("after swaps: " + rs);
     // Extract the 4 least significant digits
-    rs %= 1000;
+  
+    rs = rs.substring(0, 4);
     Serial.println("4 least sig digits: " + rs);
     goodPin = rs;
 }
-
 
