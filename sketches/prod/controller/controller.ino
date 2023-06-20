@@ -24,7 +24,7 @@ char keys[NUM_ROW][NUM_COL] = {
 //byte pin_column[NUM_COL] = {6,7,8,9}; // Connect to the column pinouts of the keypad
 byte pin_rows[NUM_ROW] = {9,8,7,6}; // Connect to the row pinouts of the keypad
 byte pin_column[NUM_COL] = {5,4,3,2}; // Connect to the column pinouts of the keypad
-// Create an instance of the Keypad class
+                                      // Create an instance of the Keypad class
 Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, NUM_ROW, NUM_COL);
 
 bool debugOn;
@@ -90,27 +90,27 @@ void loop() {
 }
 
 void processKey(char key)  {
-  /*
-    if (bd == 0 || bd == 3) {
-        if (key == 'B') {
-            bd++;
-            Serial.println("bd - b");
-        }
-    }
+    /*
+       if (bd == 0 || bd == 3) {
+       if (key == 'B') {
+       bd++;
+       Serial.println("bd - b");
+       }
+       }
 
-    if (bd == 1 || bd == 2) {
-        if (key == '0') {
-            bd++;
-            Serial.println("bd - 0");
-        }
-    }
+       if (bd == 1 || bd == 2) {
+       if (key == '0') {
+       bd++;
+       Serial.println("bd - 0");
+       }
+       }
 
-    if ( bd == 4 && key == '5') {
-        debugOn == true;
-        bd++;
-        Serial.println("bd - on");
-    }
-    */
+       if ( bd == 4 && key == '5') {
+       debugOn == true;
+       bd++;
+       Serial.println("bd - on");
+       }
+     */
     enteredPin += key;
     Serial.println(key);
     Wire.beginTransmission(I2C_DISP_ADDR);
@@ -161,7 +161,7 @@ void updateSeed() {
 }
 
 void reset() {
-  Serial.println("reseting");
+    Serial.println("reseting");
     enteredPin = "";
     Wire.beginTransmission(I2C_DISP_ADDR);
     Wire.print("1 RESETTING... ");										
@@ -211,7 +211,7 @@ void computeAnswer(unsigned long seed) {
         rs[i] = rs[i + 1];
         rs[i + 1] = temp;
     }
-  
+
     rs = rs.substring(rs.length()-4, rs.length());
     Serial.println("working pin: " + rs);
     goodPin = rs;
