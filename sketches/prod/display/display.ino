@@ -1,7 +1,8 @@
 #include <LiquidCrystal.h>
 #include <Wire.h>
 
-#define I2C_DISP_ADDR 10
+const int I2C_DISP_ADDR=10;
+const int I2C_MOTOR_ADDR=11;
 
 //const int rs = 12, en = 11, d4 = 2, d5 = 3, d6 = 4, d7 = 5;
 
@@ -9,8 +10,9 @@ LiquidCrystal lcd(12, 11, 2, 3, 4, 5);
 
 void setup() {
     Serial.begin(9600);
-    Wire.begin(MY_I2C_ADDR);
-    Serial.print("-----------------I am display device at " + MY_I2C_ADDR);           
+    Wire.begin(I2C_DISP_ADDR);
+    Serial.print("-----------------I am display device at ");  
+    Serial.print(I2C_DISP_ADDR);           
     Wire.onReceive(receiveEvents);
   lcd.begin(16, 2);
   lcd.print("reboot         ");
